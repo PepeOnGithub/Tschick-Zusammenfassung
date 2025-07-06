@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktive Analyse: Tschick von Wolfgang Herrndorf</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Earthy Roadtrip -->
+    <!-- Application Structure Plan: Die Anwendung ist in vier thematische Hauptbereiche gegliedert, die über eine feste Navigationsleiste zugänglich sind: "Die Reise", "Die Charaktere", "Die Themen" und "Analyse". Diese Struktur ersetzt die lineare, tabellarische Darstellung des Berichts durch ein interaktives Dashboard-Erlebnis. Der Kern ist "Die Reise", eine interaktive Zeitleiste, die den Roadtrip visualisiert und es dem Benutzer ermöglicht, die Handlung schrittweise zu erkunden. Dies fördert ein entdeckendes Lernen, das weitaus ansprechender ist als das Lesen einer statischen Tabelle. Die Abschnitte "Charaktere" und "Themen" bieten vertiefende Informationen, die über Klick-Interaktionen zugänglich sind. Dieser Aufbau wurde gewählt, um die komplexe Information des Berichts in logische, leicht verdauliche und interaktiv erforschbare Einheiten zu gliedern, was die Benutzerfreundlichkeit und das Verständnis, insbesondere für die Zielgruppe der Schüler, massiv verbessert. -->
+    <!-- Visualization & Content Choices: 
+        - Die Reise (Tabelle): Report Info -> Detaillierte Kapitelzusammenfassungen. Goal -> Den Handlungsverlauf der Reise interaktiv und chronologisch darstellen. Viz/Presentation -> Interaktive, horizontale Zeitleiste mit klickbaren Etappen, um Detailinformationen in einem modalen Fenster anzuzeigen (HTML/CSS/JS). Interaction -> Klick auf Etappen. Justification -> Visuell ansprechender und ansprechender als eine lange Tabelle; spiegelt die "Road Novel"-Struktur wider. Library/Method -> Vanilla JS, Tailwind CSS.
+        - Charaktere: Report Info -> Charakterbeschreibungen. Goal -> Hauptfiguren und ihre Beziehungen vorstellen. Viz/Presentation -> Klickbare Charakterkarten in einem Grid-Layout (HTML/Tailwind). Interaction -> Klick auf eine Karte zeigt die Detailbeschreibung. Justification -> Bietet einen schnellen Überblick und ermöglicht eine gezielte Vertiefung ohne Scrollen. Library/Method -> Vanilla JS.
+        - Themenentwicklung: Report Info -> Analyse der zentralen Themen. Goal -> Die Präsenz und Entwicklung der Hauptthemen im Romanverlauf visualisieren. Viz/Presentation -> Ein horizontales Balkendiagramm (Chart.js), das zeigt, wie stark jedes Thema in den Phasen "Anfang", "Reise" und "Ende" vertreten ist. Interaction -> Klick auf einen Themen-Button filtert die Detailansicht. Justification -> Bietet eine quantitative, leicht verständliche Perspektive auf die thematische Struktur. Library/Method -> Chart.js.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FBF9F1; color: #3A3A3A; }
+        .nav-active { color: #2563eb; border-bottom-color: #2563eb; }
+        .nav-item { transition: all 0.2s ease-in-out; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .timeline-item { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+        .timeline-item:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        .chart-container { position: relative; width: 100%; max-width: 800px; margin: auto; height: 400px; max-height: 50vh; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8">
+
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-2">Tschick: Eine interaktive Reise</h1>
+            <p class="text-lg text-gray-600">Erkunde die Welt, Charaktere und Themen aus Wolfgang Herrndorfs Roman.</p>
+        </header>
+
+        <nav class="sticky top-0 bg-[#FBF9F1]/80 backdrop-blur-md z-10 mb-12 border-b-2 border-gray-200">
+            <ul class="flex justify-center space-x-6 md:space-x-10 text-lg">
+                <li><a href="#reise" class="nav-item nav-active font-semibold py-4 inline-block border-b-2 border-transparent hover:text-blue-600">Die Reise</a></li>
+                <li><a href="#charaktere" class="nav-item font-semibold py-4 inline-block border-b-2 border-transparent hover:text-blue-600">Die Charaktere</a></li>
+                <li><a href="#themen" class="nav-item font-semibold py-4 inline-block border-b-2 border-transparent hover:text-blue-600">Die Themen</a></li>
+                <li><a href="#analyse" class="nav-item font-semibold py-4 inline-block border-b-2 border-transparent hover:text-blue-600">Analyse</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="reise" class="content-section active">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Der Roadtrip</h2>
+                    <p class="max-w-3xl mx-auto text-gray-600">Die Reise von Maik und Tschick ist das Herzstück des Romans. Klicke auf die einzelnen Etappen, um die wichtigsten Ereignisse, Begegnungen und Entwicklungen nachzuvollziehen. Dies ist keine gewöhnliche Reise, sondern ein Weg zur Selbstfindung, Freundschaft und Freiheit.</p>
+                </div>
+                <div id="timeline-container" class="relative w-full overflow-x-auto pb-8">
+                    <div class="inline-flex space-x-8 px-4" id="timeline">
+                    </div>
+                </div>
+            </section>
+
+            <section id="charaktere" class="content-section">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Die Hauptfiguren</h2>
+                    <p class="max-w-3xl mx-auto text-gray-600">Die Charaktere in "Tschick" sind vielschichtig und entwickeln sich im Laufe der Geschichte entscheidend weiter. Ihre Beziehungen und inneren Konflikte treiben die Handlung voran. Klicke auf eine Figur, um mehr über ihre Rolle, ihre Entwicklung und ihre Bedeutung für den Roman zu erfahren.</p>
+                </div>
+                <div id="characters-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                </div>
+            </section>
+
+            <section id="themen" class="content-section">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Zentrale Themen</h2>
+                    <p class="max-w-3xl mx-auto text-gray-600">"Tschick" behandelt universelle Themen, die weit über eine einfache Abenteuergeschichte hinausgehen. Diese Sektion beleuchtet die zentralen Motive des Romans. Das Diagramm zeigt, wie stark die Themen in den verschiedenen Phasen der Geschichte präsent sind. Klicke auf ein Thema, um eine detaillierte Analyse zu lesen.</p>
+                </div>
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <div class="lg:w-2/3">
+                       <div class="chart-container">
+                           <canvas id="themesChart"></canvas>
+                       </div>
+                    </div>
+                    <div class="lg:w-1/3">
+                        <div id="themes-buttons" class="flex flex-wrap gap-2 mb-4 justify-center lg:justify-start"></div>
+                        <div id="theme-details" class="p-6 bg-white rounded-lg shadow-md min-h-[200px]">
+                            <h3 id="theme-title" class="text-xl font-bold mb-2">Thema auswählen</h3>
+                            <p id="theme-text" class="text-gray-700">Bitte wähle ein Thema aus der Liste, um eine detaillierte Beschreibung zu sehen.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="analyse" class="content-section">
+                 <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Analyse & Interpretation</h2>
+                    <p class="max-w-3xl mx-auto text-gray-600">Neben der Handlung, den Charakteren und Themen bietet "Tschick" auch Raum für tiefere literarische Analysen. Hier werden wichtige Aspekte wie die Erzählperspektive und die Genre-Merkmale des Romans beleuchtet, die für das Verständnis des Werks entscheidend sind.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-bold mb-3 text-blue-700">Der unzuverlässige Erzähler</h3>
+                        <p class="text-gray-700">Die Geschichte wird aus der Ich-Perspektive des 14-jährigen Maik erzählt. Diese Perspektive ist subjektiv und "unzuverlässig", da Maik die Ereignisse durch seine eigenen Gefühle, Unsicherheiten und Vorurteile filtert. Für den Leser bedeutet das, dass man kritisch hinterfragen muss, ob alles genau so passiert ist, wie Maik es beschreibt. Diese Erzähltechnik schafft eine besondere Nähe zur Hauptfigur, fordert aber gleichzeitig zur aktiven Interpretation heraus. Man erlebt die Welt durch Maiks Augen, was die emotionale Wirkung verstärkt, aber auch bedeutet, dass Informationen verzerrt oder unvollständig sein können.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-bold mb-3 text-blue-700">Road Novel & Adoleszenzroman</h3>
+                        <p class="text-gray-700">"Tschick" ist eine Mischung aus zwei Genres. Als **Road Novel** steht die physische Reise im Mittelpunkt, die für die Protagonisten zu einer Reise der Selbstfindung wird. Der Lada ist dabei mehr als nur ein Auto; er ist ein Symbol für Freiheit und Unabhängigkeit. Als **Adoleszenzroman** (Coming-of-Age) thematisiert das Buch die zentralen Herausforderungen des Erwachsenwerdens: die Suche nach Identität, die erste Liebe, die Abgrenzung vom Elternhaus und die Entwicklung eigener Werte. Die Verknüpfung beider Genres macht den Roman so dynamisch und tiefgründig.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal" class="modal fixed inset-0 bg-black bg-opacity-60 items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 relative animate-fade-in">
+            <button id="modal-close" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            <h2 id="modal-title" class="text-3xl font-bold mb-4 text-gray-800"></h2>
+            <div class="mb-4">
+                <span class="font-bold">Charaktere:</span>
+                <span id="modal-chars" class="text-blue-600"></span>
+            </div>
+            <div class="mb-6">
+                 <span class="font-bold">Ort:</span>
+                <span id="modal-location" class="text-green-600"></span>
+            </div>
+            <p id="modal-content" class="text-gray-700 leading-relaxed"></p>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const data = {
+        timeline: [
+            {
+                id: 1,
+                title: "Beginn der Reise",
+                chapters: "1-4",
+                location: "Autobahnpolizeistation, Krankenhaus",
+                chars: "Maik, Tschick (erwähnt), Krankenschwester Hanna",
+                summary: "Die Erzählung startet 'in medias res'. Maik befindet sich verletzt auf einer Polizeiwache, nachdem die Reise bereits zu Ende ist. Er schweigt, um seinen Freund Tschick zu schützen. Dies erzeugt von Anfang an Spannung und etabliert Maiks Loyalität."
+            },
+            {
+                id: 2,
+                title: "Maiks Welt",
+                chapters: "5-8",
+                location: "Maiks Zuhause (Berlin), Schule",
+                chars: "Maik, Maiks Eltern, Tatjana Cosic",
+                summary: "Ein Rückblick auf Maiks Leben vor der Reise. Er ist ein Außenseiter mit dem Spitznamen 'Psycho', seine Mutter ist Alkoholikerin, der Vater emotional abwesend. Seine Unsichtbarkeit in der Schule und die unerwiderte Liebe zu Tatjana prägen seinen Alltag."
+            },
+            {
+                id: 3,
+                title: "Tschick taucht auf",
+                chapters: "9-11",
+                location: "Schule (Klassenzimmer)",
+                chars: "Maik, Tschick, Herr Wagenbach",
+                summary: "Andrej 'Tschick' Tschichatschow kommt neu in die Klasse. Als Russlanddeutscher und mit seinem unkonventionellen Verhalten ist auch er ein Außenseiter. Die Nicht-Einladung zu Tatjanas Party wird für Maik zum emotionalen Tiefpunkt und Auslöser für das Abenteuer."
+            },
+            {
+                id: 4,
+                title: "Der gestohlene Lada",
+                chapters: "12-17",
+                location: "Maiks Zuhause, Tatjanas Party",
+                chars: "Maik, Tschick, Tatjana Cosic",
+                summary: "Die Sommerferien beginnen, Maik ist allein. Tschick erscheint mit einem gestohlenen Lada und schlägt eine Reise in die 'Walachei' vor. Nach einem mutigen Abstecher zu Tatjanas Party, bei dem Maik ihr eine Zeichnung überreicht, beginnt ihr Roadtrip."
+            },
+            {
+                id: 5,
+                title: "Unterwegs in der Provinz",
+                chapters: "18-28",
+                location: "Ostdeutsche Provinz, Feldwege, Landstraßen",
+                chars: "Maik, Tschick, diverse Nebenfiguren",
+                summary: "Der Kern des Roadtrips. Die Jungen lernen, sich selbst zu versorgen (Benzin klauen), erleben die Weite der Landschaft und treffen auf skurrile, aber oft herzliche Menschen. Maik lernt Autofahren. Die Reise wird zum Bildungsweg, der Selbstvertrauen und Einfallsreichtum fördert."
+            },
+            {
+                id: 6,
+                title: "Begegnung mit Isa",
+                chapters: "29-34",
+                location: "Müllkippe",
+                chars: "Maik, Tschick, Isa Schmidt",
+                summary: "Auf einer Müllkippe treffen sie Isa Schmidt, ein weiteres Mädchen, das außerhalb der gesellschaftlichen Normen lebt. Sie schließt sich ihnen kurz an. In dieser Zeit offenbart Tschick seine Homosexualität, was die Freundschaft vertieft und ein Zeichen für die große Toleranz innerhalb der Gruppe ist."
+            },
+            {
+                id: 7,
+                title: "Der Unfall",
+                chapters: "41-45",
+                location: "Landstraße",
+                chars: "Maik, Tschick, Maiks Vater (später)",
+                summary: "Die Reise nimmt eine dramatische Wendung, als sie einen Unfall mit einem Schweinetransporter haben. Tschick wird am Fuß verletzt. Trotz allem fühlt Maik ein 'Gefühl der Unzerstörbarkeit'. Die Rückkehr in die Zivilisation rückt näher."
+            },
+            {
+                id: 8,
+                title: "Das Ende der Reise",
+                chapters: "46-49",
+                location: "Polizeirevier, Gericht, Zuhause",
+                chars: "Maik, Tschick, Polizisten, Richter",
+                summary: "Die Jungen werden gefasst. Vor Gericht stehen sie füreinander ein und sagen die Wahrheit. Maik ist durch die Reise transformiert: Er hat Selbstbewusstsein gewonnen. Der Roman endet nicht mit einer Bestrafung, sondern mit der Erkenntnis, dass dies 'der beste Sommer von allen' war und einer tiefen, beständigen Freundschaft."
+            }
+        ],
+        characters: [
+             {
+                name: "Maik Klingenberg",
+                role: "Protagonist & Erzähler",
+                desc: "Zu Beginn ein 14-jähriger, unsicherer Außenseiter aus wohlhabendem, aber emotional kaputtem Elternhaus. Er ist heimlich in Tatjana verliebt. Die Reise mit Tschick verändert ihn fundamental. Er entwickelt sich zu einem selbstbewussten, loyalen und mutigen Jugendlichen, der für seine Freundschaft einsteht."
+            },
+            {
+                name: "Andrej 'Tschick' Tschichatschow",
+                role: "Der Katalysator",
+                desc: "Ein Russlanddeutscher, der neu in Maiks Klasse kommt. Er ist impulsiv, direkt und wirkt oft verwahrlost. Tschick ist der Motor der Geschichte: Er stiehlt den Lada und initiiert die Reise. Trotz seiner harten Schale ist er loyal, empathisch und offenbart Maik seine Homosexualität. Er verkörpert Freiheit und Rebellion."
+            },
+            {
+                name: "Isa Schmidt",
+                role: "Die Unabhängige",
+                desc: "Ein intelligentes und willensstarkes Mädchen, das die Jungen auf einer Müllkippe treffen. Sie lebt außerhalb aller Konventionen, ist aber nicht bemitleidenswert, sondern beeindruckt durch ihre Direktheit und ihren Überlebenswillen. Sie repräsentiert eine andere Form von Freiheit und Außenseitertum und ist eine wichtige Weggefährtin."
+            },
+            {
+                name: "Tatjana Cosic",
+                role: "Das Ideal",
+                desc: "Maiks Schwarm und das beliebteste Mädchen der Klasse. Sie ist der Grund für Maiks anfänglichen Liebeskummer und ihre Geburtstagsparty ist der Auslöser für die Reise. Sie repräsentiert die 'normale' Welt, die Maik zu Beginn zu erreichen versucht, sich aber im Laufe der Reise davon emanzipiert."
+            },
+            {
+                name: "Maiks Eltern",
+                role: "Die abwesenden Erwachsenen",
+                desc: "Maiks Mutter ist Alkoholikerin, sein Vater ein erfolgreicher, aber emotional abwesender Geschäftsmann mit einer Affäre. Ihre Vernachlässigung schafft das Vakuum, das Maiks und Tschicks Flucht erst ermöglicht. Sie stehen für eine dysfunktionale Erwachsenenwelt, gegen die die Jungen rebellieren."
+            }
+        ],
+        themes: [
+            { 
+                name: "Freundschaft",
+                desc: "Das Herzstück des Romans. Die ungleiche Freundschaft zwischen Maik und Tschick basiert auf Loyalität und bedingungsloser Akzeptanz. Sie bieten einander den Halt, den sie in ihren Familien nicht finden. Ihre Freundschaft ist eine selbstgewählte Familie, die sie stärker macht.",
+                values: [8, 10, 9] 
+            },
+            { 
+                name: "Identitätssuche",
+                desc: "Die Reise ist eine Metapher für das Erwachsenwerden. Maik findet heraus, wer er wirklich ist, abseits von den Erwartungen anderer und dem Spitznamen 'Psycho'. Er lernt, Entscheidungen zu treffen und Verantwortung zu übernehmen, und entwickelt ein stabiles Selbstbild.",
+                values: [7, 9, 8]
+            },
+            { 
+                name: "Freiheit",
+                desc: "Der Ausbruch mit dem Lada symbolisiert die Suche nach Freiheit von gesellschaftlichen Zwängen und familiärer Kontrolle. Die offene Straße, die Natur und das Brechen von Regeln geben den Jungen ein Gefühl von unbegrenzter Möglichkeit und Selbstbestimmung.",
+                values: [4, 10, 6]
+            },
+            { 
+                name: "Außenseitertum",
+                desc: "Maik, Tschick und Isa sind alle Außenseiter, die nicht in die gesellschaftlichen Normen passen. Doch gerade dieser Status verbindet sie und ermöglicht ihre einzigartige Freundschaft. Der Roman feiert das Anderssein und kritisiert oberflächliche Vorurteile.",
+                values: [9, 8, 7]
+            },
+            { 
+                name: "Familie",
+                desc: "Die dysfunktionalen Familien der Protagonisten sind der Hauptgrund für ihre Flucht. Der Roman zeigt, wie Vernachlässigung und mangelnde emotionale Unterstützung Jugendliche prägen. Die Reise wird zur Suche nach einem alternativen, besseren Zusammenhalt.",
+                values: [8, 5, 6]
+            }
+        ]
+    };
+
+    const timelineContainer = document.getElementById('timeline');
+    const charactersContainer = document.getElementById('characters-container');
+    const modal = document.getElementById('modal');
+    const modalClose = document.getElementById('modal-close');
+    const modalTitle = document.getElementById('modal-title');
+    const modalChars = document.getElementById('modal-chars');
+    const modalLocation = document.getElementById('modal-location');
+    const modalContent = document.getElementById('modal-content');
+
+    function renderTimeline() {
+        data.timeline.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'timeline-item flex-shrink-0 w-64 bg-white rounded-lg shadow-md p-6 cursor-pointer text-center';
+            div.innerHTML = `
+                <div class="text-sm font-bold text-blue-600 mb-2">Kapitel ${item.chapters}</div>
+                <h3 class="text-xl font-bold text-gray-800">${item.title}</h3>
+            `;
+            div.addEventListener('click', () => showModal(item));
+            timelineContainer.appendChild(div);
+        });
+    }
+
+    function showModal(item) {
+        modalTitle.textContent = item.title;
+        modalChars.textContent = item.chars;
+        modalLocation.textContent = item.location;
+        modalContent.textContent = item.summary;
+        modal.classList.add('active');
+    }
+
+    modalClose.addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
+    
+    function renderCharacters() {
+        charactersContainer.innerHTML = '';
+        data.characters.forEach(char => {
+            const div = document.createElement('div');
+            div.className = 'character-card bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105';
+            div.innerHTML = `
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">${char.name}</h3>
+                <p class="font-semibold text-blue-600 mb-4">${char.role}</p>
+                <p class="text-gray-600 hidden">${char.desc}</p>
+            `;
+            div.addEventListener('click', (e) => {
+                const desc = e.currentTarget.querySelector('p:last-child');
+                desc.classList.toggle('hidden');
+            });
+            charactersContainer.appendChild(div);
+        });
+    }
+
+    function renderThemes() {
+        const themesButtons = document.getElementById('themes-buttons');
+        const themeTitle = document.getElementById('theme-title');
+        const themeText = document.getElementById('theme-text');
+        
+        data.themes.forEach(theme => {
+            const button = document.createElement('button');
+            button.className = 'px-4 py-2 bg-gray-200 text-gray-800 rounded-full hover:bg-blue-500 hover:text-white transition-colors';
+            button.textContent = theme.name;
+            button.addEventListener('click', () => {
+                themeTitle.textContent = theme.name;
+                themeText.textContent = theme.desc;
+                document.querySelectorAll('#themes-buttons button').forEach(btn => btn.classList.remove('bg-blue-600', 'text-white'));
+                button.classList.add('bg-blue-600', 'text-white');
+            });
+            themesButtons.appendChild(button);
+        });
+
+        const ctx = document.getElementById('themesChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.themes.map(t => t.name),
+                datasets: [
+                    {
+                        label: 'Anfang (vor der Reise)',
+                        data: data.themes.map(t => t.values[0]),
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Während der Reise',
+                        data: data.themes.map(t => t.values[1]),
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Ende (nach der Reise)',
+                        data: data.themes.map(t => t.values[2]),
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: { display: true, text: 'Thematische Präsenz (geschätzt)' }
+                    },
+                    y: {
+                        stacked: true
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.x !== null) {
+                                    label += context.parsed.x;
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'bottom',
+                    },
+                }
+            }
+        });
+    }
+
+    const navLinks = document.querySelectorAll('nav a');
+    const sections = document.querySelectorAll('.content-section');
+
+    function handleNavigation(hash) {
+        sections.forEach(section => {
+            if ('#' + section.id === hash) {
+                section.classList.add('active');
+            } else {
+                section.classList.remove('active');
+            }
+        });
+        navLinks.forEach(link => {
+            if (link.getAttribute('href') === hash) {
+                link.classList.add('nav-active');
+            } else {
+                link.classList.remove('nav-active');
+            }
+        });
+    }
+    
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const hash = e.currentTarget.getAttribute('href');
+            window.location.hash = hash;
+        });
+    });
+
+    window.addEventListener('hashchange', () => {
+        handleNavigation(window.location.hash || '#reise');
+    });
+
+    renderTimeline();
+    renderCharacters();
+    renderThemes();
+    handleNavigation(window.location.hash || '#reise');
+});
+</script>
+</body>
+</html>
